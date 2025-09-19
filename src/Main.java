@@ -158,7 +158,6 @@ public class Main {
 
 
                  case 5:
-                     System.out.println("git ");
                      System.out.print("New full name : ");
                      String newFullName = scanner.nextLine();
                      System.out.print("New email     : ");
