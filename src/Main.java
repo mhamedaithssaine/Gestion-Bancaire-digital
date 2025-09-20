@@ -3,13 +3,18 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
+import Module.Transaction;
 
 import RepositoriesMemoire.InMemoryAccountRepository;
 import RepositoriesMemoire.InMemoryUserRepository;
+import RepositoriesMemoire.InMemoryTransactionRepository;
 import Services.AccountService;
 import Services.AuthService;
+import Services.TransactionService;
 import Module.User;
 import Module.Account;
+import Services.TransactionService;
+
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -71,7 +76,7 @@ public class Main {
 
 
    private static User userMenu (Scanner scanner , User currentUser, AuthService authService){
-       AccountService accountService = new AccountService(new InMemoryAccountRepository());
+       AccountService accountService = new AccountService(new InMemoryAccountRepository(),  new TransactionService(new InMemoryTransactionRepository()));
 
        while(true){
              System.out.println("______ User Menu("+currentUser.getFullName()+")______");
@@ -79,10 +84,14 @@ public class Main {
              System.out.println("2.  My list account");
              System.out.println("3.  Deposit ");
              System.out.println("4.  Withdraw ");
-             System.out.println("5.  Update profile");
-             System.out.println("6.  Change password");
-             System.out.println("7.  Close account");
-             System.out.println("8.  Logout ");
+             System.out.println("5.  Transfer");
+             System.out.println("6. Transaction History");
+             System.out.println("7.  Update profile");
+             System.out.println("8.  Change password");
+             System.out.println("9.  Close account");
+             System.out.println("10.  Logout ");
+
+
              System.out.print("Choix : ");
              int choice = scanner.nextInt();
              scanner.nextLine();
@@ -155,9 +164,56 @@ public class Main {
                          }
 
                      break;
-
-
                  case 5:
+                     myAccounts = accountService.getMyAccounts(currentUser.getId());
+                     if(myAccounts.isEmpty()){
+                         System.out.println("You don't have any account!");
+                         break;
+                     }
+                     System.out.println("Your accounts:");
+                     for (Account acc : myAccounts) {
+                         System.out.println(" - " + acc.getAccountId() + " | Balance: " + acc.getBalance());
+                     }
+
+                     System.out.println("Enter source account ID: ");
+                     String fromAccId = scanner.nextLine();
+                     System.out.println("Enter destination account ID: ");
+                     String toAccId = scanner.nextLine();
+                     System.out.println("Enter amount to transfer: ");
+                     BigDecimal transferAmount = scanner.nextBigDecimal();
+
+                     Account updatedSource = accountService.transfer(fromAccId, toAccId, currentUser.getId(), transferAmount);
+                     if(updatedSource != null){
+                         System.out.println("Transfer successful! New balance: " + updatedSource.getBalance());
+                     } else {
+                         System.out.println("Transfer failed!");
+                     }
+                     break;
+
+                 case 6:
+                     myAccounts = accountService.getMyAccounts(currentUser.getId());
+                     if(myAccounts.isEmpty()){
+                         System.out.println("You don't have an account!");
+                         break;
+                     }
+                     System.out.println("Your accounts:");
+                     for (Account acc : myAccounts) {
+                         System.out.println(" - " + acc.getAccountId());
+                     }
+                     System.out.println("Enter account ID to view history: ");
+                     String histAccId = scanner.nextLine();
+
+                     List<Transaction> history = accountService.getTransactionHistory(histAccId, currentUser.getId());
+                     if(history == null || history.isEmpty()){
+                         System.out.println("No transactions found!");
+                     } else {
+                         for(Transaction t : history){
+                             System.out.println(t.getTimeTamps()+" | "+t.getType()+" | "+t.getAmount()+" | "+t.getDescription());
+                         }
+                     }
+                     break;
+
+                 case 7:
                      System.out.print("New full name : ");
                      String newFullName = scanner.nextLine();
                      System.out.print("New email     : ");
@@ -169,19 +225,46 @@ public class Main {
                          currentUser = updatedUser;
                          System.out.println("Profile updated successfully.");
                      } else {
-                         System.out.println("Failed to update profile.");
+                         System.out.println("Failed to update profile !");
                      }
                      break;
-                 case 6:
-                         System.out.println("change password");
-                         break;
-                 case 7:
-
-                             System.out.println("close account");
-                             break;
-
-
                  case 8:
+                         System.out.println("change password");
+                         System.out.println("New password : ");
+                         String newPassword = scanner.next();
+                         User updateUserPassword = authService.updatePassword(currentUser,newPassword);
+                         if (updateUserPassword !=null ){
+                             currentUser.setPassword(updateUserPassword.getPassword());
+                             System.out.println("Password updated successfully. ");
+                         } else {
+                             System.out.print("Fialed to update Password !");
+                         }
+                         break;
+                 case 9:
+
+                     myAccounts = accountService.getMyAccounts(currentUser.getId());
+                     if (myAccounts.isEmpty()) {
+                         System.out.println("You don’t have any account!");
+                         break;
+                     }
+                     for (Account acc : myAccounts) {
+                         System.out.println(" - " + acc.getAccountId() );
+                         if(acc.isActive()){
+                             System.out.println("Account active .");
+                         } else System.out.println("Account inActive");
+                     }
+                     System.out.print("Enter account ID to close: ");
+                     String accIdToClose = scanner.nextLine();
+                     Account closed = accountService.closeAccount(accIdToClose, currentUser.getId());
+                     if (closed != null) {
+                         System.out.println(" Account " + closed.getAccountId() + " closed successfully!");
+                     } else {
+                         System.out.println("Failed to close account.");
+                     }
+                     break;
+
+
+                 case 10:
                              System.out.println("logout successful");
                              currentUser = null;
                              return null ;
